@@ -92,7 +92,7 @@ class Trap
         $this->trapModuleConfig=$this->icingaweb2Etc."/modules/trapdirector/config.ini";
         $this->icingaweb2Ressources=$this->icingaweb2Etc."/resources.ini";
 
-        //************* Setup logging
+        // Setup logging
         $this->logging = new Logging();
         if ($baseLogLevel != null)
         {
@@ -110,7 +110,7 @@ class Trap
         
         $this->trapApiClass = new TrapApi($this->logging);
         
-        //*************** Get options from ini files
+        // Get options from ini files
         if (! is_file($this->trapModuleConfig))
         {
             throw new Exception("Ini file ".$this->trapModuleConfig." does not exists");
@@ -123,18 +123,18 @@ class Trap
         }
         $this->getMainOptions($trapConfig); // Get main options from ini file
         
-        //*************** Setup database class & get options
+        // Setup database class & get options
         $this->setupDatabase($trapConfig);
         
         $this->getDatabaseOptions(); // Get options in database
         
-        //*************** Setup API
+        // Setup API
         if ($this->apiUse === true) $this->getAPI(); // Setup API
         
-        //*************** Setup MIB
+        // Setup MIB
         $this->mibClass = new Mib($this->logging,$this->trapsDB,$this->snmptranslate,$this->snmptranslate_dirs); // Create Mib class
         
-        //*************** Setup Rule
+        // Setup Rule
         $this->ruleClass = new Rule($this); //< Create Rule class
         
         $this->trapData=array(  // TODO : put this in a reset function (DAEMON_MODE)
@@ -145,7 +145,7 @@ class Trap
             'trap_oid'	=> 'unknown'
         );
         
-        //*************** Setup Plugins
+        // Setup Plugins
         //Create plugin class. Plugins are not loaded here, but by calling registerAllPlugins
         $this->pluginClass = new Plugins($this);
             
@@ -323,10 +323,9 @@ class Trap
         if (($ret_code=$db_conn->query($sql)) === false) {
             $this->logging->log('No result in query : ' . $sql,ERROR,'');
         }
-        $name=$ret_code->fetch();
-        if ($name['name'] != null)
-        {
-            return array('trap_name_mib'=>$name['mib'],'trap_name'=>$name['name']);
+        else {
+            if (($name=$ret_code->fetch()) !== false)
+                return array('trap_name_mib'=>$name['mib'],'trap_name'=>$name['name']);
         }
         
         // Also check if it is an instance of OID
@@ -337,10 +336,9 @@ class Trap
         if (($ret_code=$db_conn->query($sql)) === false) {
             $this->logging->log('No result in query : ' . $sql,ERROR,'');
         }
-        $name=$ret_code->fetch();
-        if ($name['name'] != null)
-        {
-            return array('trap_name_mib'=>$name['mib'],'trap_name'=>$name['name']);
+        else {
+            if (($name=$ret_code->fetch()) !== false)
+                return array('trap_name_mib'=>$name['mib'],'trap_name'=>$name['name']);
         }
         
         // Try to get oid name from snmptranslate
@@ -575,35 +573,44 @@ class Trap
                 $rule_ret_key++;
                 continue;
             }
-            // TODO : get hosts IP by API
+
             if (isset($rule['host_group_name']) && $rule['host_group_name']!=null)
             { // get ips of group members by oid
-                $db_conn2=$this->trapsDB->db_connect_ido();
-                $sql="SELECT m.host_object_id, a.address as ip4, a.address6 as ip6, b.name1 as host_name
+                if ($this->apiUse === false)
+                {
+                    $db_conn2=$this->trapsDB->db_connect_ido();
+                    $sql="SELECT m.host_object_id, a.address, a.address6, b.name1 as name
 						FROM icinga_objects as o
 						LEFT JOIN icinga_hostgroups as h ON o.object_id=h.hostgroup_object_id
 						LEFT JOIN icinga_hostgroup_members as m ON h.hostgroup_id=m.hostgroup_id
 						LEFT JOIN icinga_hosts as a ON a.host_object_id = m.host_object_id
 						LEFT JOIN icinga_objects as b ON b.object_id = a.host_object_id
 						WHERE o.name1='".$rule['host_group_name']."';";
-                if (($ret_code2=$db_conn2->query($sql)) === false) {
-                    $this->logging->log('No result in query : ' . $sql,WARN,'');
-                    continue;
+                    if (($ret_code2=$db_conn2->query($sql)) === false) {
+                        $this->logging->log('No result in query : ' . $sql,WARN,'');
+                        continue;
+                    }
+                    $grouphosts=$ret_code2->fetchAll();
+                }else{
+                    $api = $this->getAPI();
+                    $api->setCredentials($this->apiUsername, $this->apiPassword);
+                    $grouphosts=$api->getHostsIPByHostGroup($rule['host_group_name']);
                 }
-                $grouphosts=$ret_code2->fetchAll();
                 //echo "rule grp :\n";print_r($grouphosts);echo "\n";
                 foreach ( $grouphosts as $host)
                 {
-                    //echo $host['ip4']."\n";
-                    if ($host['ip4']==$ip || $host['ip6']==$ip)
+                    if( is_object( $host ) ) $host=(array)$host;
+                    //echo $host['address']."\n";
+                    if ($host['address']==$ip || $host['address6']==$ip)
                     {
                         //echo "Rule added \n";
                         $rules_ret[$rule_ret_key]=$rules_all[$key];
-                        $rules_ret[$rule_ret_key]['host_name']=$host['host_name'];
+                        $rules_ret[$rule_ret_key]['host_name']=$host['name'];
                         $rule_ret_key++;
                     }
                 }
             }
+
         }
         //echo "rule rest :\n";print_r($rules_ret);echo "\n";exit(0);
         return $rules_ret;
@@ -856,20 +863,27 @@ class Trap
     public function reset_services()
     {
         // Get all services not in 'ok' state
-        $sql_query="SELECT s.service_object_id,
-	 UNIX_TIMESTAMP(s.last_check) AS last_check,
-	s.current_state as state,
-	v.name1 as host_name,
-    v.name2 as service_name
-	FROM icinga_servicestatus AS s
-    LEFT JOIN icinga_objects as v ON s.service_object_id=v.object_id
-    WHERE s.current_state != 0;";
-        $db_conn=$this->trapsDB->db_connect_ido();
-        if (($services_db=$db_conn->query($sql_query)) === false) { // set err to 1 to throw exception.
-            $this->logging->log('No result in query : ' . $sql_query,ERROR,'');
-            return 0;
+        if ($this->apiUse === false)
+        {
+            $sql_query="SELECT s.service_object_id,
+                                UNIX_TIMESTAMP(s.last_check) AS last_check,
+                                s.current_state as state,
+                                v.name1 as host_name,
+                                v.name2 as name
+                                FROM icinga_servicestatus AS s
+                                LEFT JOIN icinga_objects as v ON s.service_object_id=v.object_id
+                                WHERE s.current_state != 0;";
+            $db_conn=$this->trapsDB->db_connect_ido();
+            if (($services_db=$db_conn->query($sql_query)) === false) { // set err to 1 to throw exception.
+                $this->logging->log('No result in query : ' . $sql_query,ERROR,'');
+                return 0;
+            }
+            $services=$services_db->fetchAll();
+        }else{
+            $api = $this->getAPI();
+            $api->setCredentials($this->apiUsername, $this->apiPassword);
+            $services=$api->getNOKservice();
         }
-        $services=$services_db->fetchAll();
         
         // Get all rules
         $sql_query="SELECT host_name, service_name, revert_ok FROM ".$this->dbPrefix."rules where revert_ok != 0;";
@@ -885,13 +899,14 @@ class Trap
         $numreset=0;
         foreach ($rules as $rule)
         {
+            if( is_object( $services ) ) $services=(array)$services;
             foreach ($services as $service)
             {
-                if ($service['service_name'] == $rule['service_name'] &&
+                if ($service['name'] == $rule['service_name'] &&
                     $service['host_name'] == $rule['host_name'] &&
                     ($service['last_check'] + $rule['revert_ok']) < $now)
                 {
-                    $this->serviceCheckResult($service['host_name'],$service['service_name'],0,'Reset service to OK after '.$rule['revert_ok'].' seconds');
+                    $this->serviceCheckResult($service['host_name'],$service['name'],0,'Reset service to OK after '.$rule['revert_ok'].' seconds');
                     $numreset++;
                 }
             }

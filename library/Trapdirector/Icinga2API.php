@@ -285,6 +285,28 @@ class Icinga2API extends IcingaApiBase
         
         return $services;
     }
+
+    /** Get services object by id (host!name)
+     *	does not catch exceptions
+     *	@param $name string service __name (host!name)
+     *	@return array  service id
+     */
+    public function getNOKService()
+    {
+        $filter = 'service.state != ServiceOK && !(service.acknowledgement || service.downtime_depth || service.host.downtime_depth)';
+        $services =  $this->standardQuery(
+            'service',
+            $filter,
+            array('__name','name','last_check','host_name','state')
+            );
+        
+        foreach ( array_keys($services) as $key )
+        {
+            $services[$key]->id = $services[$key]->__name;
+        }
+        
+        return $services;
+    }
     
     
 }

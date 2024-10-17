@@ -31,7 +31,8 @@ class StatusCommand extends Command
 			
 			$dbresource=$this->Config()->get('config', 'database');
 			printf("DB name : %s\n",$dbresource);
-			$dataBase = IcingaDbConnection::fromResourceName($dbresource)->getConnection();
+//			$dataBase = IcingaDbConnection::fromResourceName($dbresource)->getConnection();
+			$dataBase = IcingaDbConnection::fromResourceName($dbresource)->getDbAdapter();
 			
 			$query = $dataBase->select()->from($Config->getTrapTableName(),array('COUNT(*)'));			
 			printf("Number of traps : %s\n", $dataBase->fetchOne($query) );

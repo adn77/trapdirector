@@ -141,7 +141,8 @@ class MibCommand extends Command
 			
 			$dbresource=$this->Config()->get('config', 'database');
 			echo "DB name : $dbresource\n";
-			$db = IcingaDbConnection::fromResourceName($dbresource)->getConnection();
+//			$db = IcingaDbConnection::fromResourceName($dbresource)->getConnection();
+			$db = IcingaDbConnection::fromResourceName($dbresource)->getDbAdapter();
 			
 			$query = $db->delete(
 			    $Config->getMIBCacheTableName(),

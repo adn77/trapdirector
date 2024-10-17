@@ -32,7 +32,8 @@ class HandlerController extends TrapsController
 		      $this->moduleConfig->getHandlerListTitles(),
 		      $this->moduleConfig->getHandlerListDisplayColumns(),
 		      $this->moduleConfig->getHandlerColumns(),
-		      $dbConn->getConnection(),
+		      $dbConn->getDbAdapter(),
+//		      $dbConn->getConnection(),
 		      $this->view,
 		      $this->moduleConfig->urlPath());
 		
@@ -546,7 +547,7 @@ class HandlerController extends TrapsController
 			    if ($this->apiMode == TRUE)
 			    {
 			        $object=$this->getIdoConn()->getHostGroupById($params['hostid']['val']);
-			        if (count($object) == 0 || $params['host_name']['val'] != $object->__name)
+				if (empty($object) || $params['host_name']['val'] != $object->__name)
 			        {
 			            $this->_helper->json(array('status'=>"Invalid object group id : Please re enter service"));
 			            return;

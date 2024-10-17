@@ -224,7 +224,8 @@ class UIDatabase //extends TrapDBQuery
     public function getDbConn()
     {
         if ($this->getDb() == null) return null;
-        return $this->getDb()->getConnection();
+        return $this->getDb()->getDbAdapter();
+//        return $this->getDb()->getConnection();
     }
     
     /**

@@ -121,6 +121,7 @@ class SettingsController extends TrapsController
       
       $this->view->ido_db_error=$dberror[0];
       $this->view->ido_message='IDO Database : ' . $dberror[1];
+      $this->view->ido_message .='<br />=&gt; Default to API use. Make sure it is configured and check is returning OK!';
   }
   
   /**
@@ -250,10 +251,10 @@ class SettingsController extends TrapsController
 	// Test Database
     $this->check_db();
 	
-	//********* Test API
+	// Test API
     $this->check_api();
 	
-	//*********** Test snmptrapd alive and options
+	//Test snmptrapd alive and options
 	list ($this->view->snmptrapdError, $this->view->snmptrapdMessage) = $this->checkSnmpTrapd();
 
 	// List DB in $ressources
@@ -464,7 +465,9 @@ class SettingsController extends TrapsController
       exec("$sspath -lun | grep ':162 '",$psOutput);
       if (count($psOutput) == 0)
       {
-          return array(1,'Port UDP/162 is not open : is snmptrapd running?');
+          $extra = "";
+          if (is_file("/.dockerenv")){ $extra = '<br />=&gt; ignore if Trapdirector is running in a different Docker container'; }
+          return array(1,'Port UDP/162 is not open : is snmptrapd running?'. $extra);
       }
       $psOutput=array();
       $selinux_state = '';

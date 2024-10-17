@@ -174,7 +174,7 @@ class MIBLoader
 		}
 		$retArray['description']=null;
 		/* TODO : put in DB (but maybe only in trap_class).
-		$query=$db->getConnection()->insert(
+		$query=$db->getDbAdapter()->insert(
 			$this->getModuleConfig()->getTrapRuleName(),
 			$array(
 				'oid'	=>

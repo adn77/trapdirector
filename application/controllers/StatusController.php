@@ -131,7 +131,7 @@ class StatusController extends TrapsController
 			/** Check for mib file UPLOAD */
 			if (isset($_FILES['mibfile']))
 			{
-			    $name=filter_var($_FILES['mibfile']['name'],FILTER_SANITIZE_STRING);
+				$name=htmlspecialchars($_FILES['mibfile']['name']);
 				$DirConf=explode(':',$this->Config()->get('config', 'snmptranslate_dirs'));
 				$destDir=array_shift($DirConf);
 				if (!is_dir($destDir))
@@ -147,7 +147,7 @@ class StatusController extends TrapsController
 				    else
 				    {
 				        $destination = $destDir .'/'.$name; //$this->Module()->getBaseDir() . "/mibs/$name";
-				        $sourceTmpNam=filter_var($_FILES['mibfile']['tmp_name'],FILTER_SANITIZE_STRING);
+				        $sourceTmpNam=htmlspecialchars($_FILES['mibfile']['tmp_name']);
 				        if (move_uploaded_file($sourceTmpNam,$destination)===false)
     				    {
     				        $this->view->uploadStatus="ERROR, file $destination not loaded. Check file and path name or selinux violations";
