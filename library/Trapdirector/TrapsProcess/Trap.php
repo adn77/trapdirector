@@ -123,6 +123,7 @@ class Trap
         }
         $this->getMainOptions($trapConfig); // Get main options from ini file
         
+	try {
         // Setup database class & get options
         $this->setupDatabase($trapConfig);
         
@@ -148,7 +149,7 @@ class Trap
         // Setup Plugins
         //Create plugin class. Plugins are not loaded here, but by calling registerAllPlugins
         $this->pluginClass = new Plugins($this);
-            
+	}catch (Exception $e){ return; }
             
     }
 
