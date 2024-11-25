@@ -2,6 +2,7 @@
 
 namespace Icinga\Module\TrapDirector\Tables;
 
+use Icinga\Date\DateFormatter;
 
 use Icinga\Web\Request;
 use Icinga\Web\Url;
@@ -68,7 +69,7 @@ class TrapTableList extends TrapTable
 				// Check missing value
 				if (property_exists($row, $rowkey)) 
 				{
-					$val = ($rowkey=='timestamp') ?  strftime('%T',$row->$rowkey) : $row->$rowkey;
+					$val = ($rowkey=='timestamp') ?  DateFormatter::formatTime($row->$rowkey) : $row->$rowkey;
 				} else {
 					$val = '-';
 				}

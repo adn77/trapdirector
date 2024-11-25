@@ -2,9 +2,12 @@
 
 namespace Icinga\Module\TrapDirector\Controllers;
 
+use Icinga\Date\DateFormatter;
+
 use Icinga\Web\Url;
 
 use Exception;
+
 
 use Icinga\Module\Trapdirector\TrapsController;
 
@@ -89,7 +92,7 @@ class ReceivedController extends TrapsController
 		// Store result in array (with Titles).
 		foreach ($queryArray as $key => $val) {
 			if ($key == 'timestamp') {
-				$cval=strftime('%c',$trapDetail->$key);
+				$cval=DateFormatter::formatDateTime($trapDetail->$key);
 			} else {
 				$cval=$trapDetail->$key;
 			}

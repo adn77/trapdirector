@@ -7,6 +7,8 @@ use Icinga\Application\Icinga;
 use Icinga\Data\Selectable;
 use Icinga\Data\Paginatable;
 
+use Icinga\Date\DateFormatter;
+
 use Icinga\Web\Request;
 
 use Icinga\Web\Widget;
@@ -50,7 +52,7 @@ abstract class TrapTable implements Paginatable
         if (in_array(setlocale(LC_ALL, 0), array('en_US.UTF-8', 'C'))) {
             $day = date('l, jS F Y', (int) $timestamp);
         } else {
-            $day = strftime('%A, %e. %B, %Y', (int) $timestamp);
+            $day = DateFormatter::formatDate((int) $timestamp);
         }
 
         if ($this->lastDay === $day) {
